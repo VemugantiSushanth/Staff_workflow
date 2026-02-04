@@ -8,6 +8,7 @@ import {
   StatusBar,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -64,6 +65,22 @@ export default function MyAccountScreen() {
     ]);
   };
 
+  /* ================= CUSTOMER CARE ================= */
+  const handleCustomerCare = () => {
+    Alert.alert(
+      "Customer Care",
+      "+91 7617618567",
+      [
+        { text: "CANCEL", style: "cancel" },
+        {
+          text: "CALL",
+          onPress: () => Linking.openURL("tel:+917617618567"),
+        },
+      ],
+      { cancelable: true },
+    );
+  };
+
   /* ================= DEFAULT AVATAR ICON ================= */
   const renderDefaultAvatar = () => {
     if (gender === "male") {
@@ -79,7 +96,7 @@ export default function MyAccountScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: "#F8FAFC" }}>
       <StatusBar backgroundColor="#FFD700" barStyle="dark-content" />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 160 }}>
         {/* ================= HEADER ================= */}
         <View style={styles.headerCard}>
           <View>
@@ -112,6 +129,17 @@ export default function MyAccountScreen() {
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
+
+        {/* ================= CUSTOMER CARE BUTTON ================= */}
+        <View style={styles.customerCareWrap}>
+          <TouchableOpacity
+            style={styles.customerCareBtn}
+            onPress={handleCustomerCare}
+          >
+            <Ionicons name="headset-outline" size={18} color="#000" />
+            <Text style={styles.customerCareText}>Customer Care</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       {/* ================= FOOTER ================= */}
@@ -228,6 +256,30 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "800",
     fontSize: 16,
+  },
+
+  /* CUSTOMER CARE */
+  customerCareWrap: {
+    alignItems: "flex-end",
+    marginTop: 24,
+    marginRight: 20,
+  },
+
+  customerCareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: "#000",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: "#fff",
+  },
+
+  customerCareText: {
+    fontWeight: "700",
+    color: "#000",
   },
 
   footer: {

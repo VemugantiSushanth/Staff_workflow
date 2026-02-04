@@ -10,6 +10,10 @@ import {
   Alert,
   Linking,
   TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Keyboard,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,6 +38,8 @@ export default function AssignedServiceDetails() {
   const [running, setRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [workStopped, setWorkStopped] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
 
   const timerRef = useRef<number | null>(null);
 
@@ -82,6 +88,8 @@ export default function AssignedServiceDetails() {
   /* ================= IMAGE UPLOAD ================= */
   const uploadImage = async (localUri: string, type: "start" | "end") => {
     try {
+      setUploading(true);
+
       const { data } = await supabase.auth.getUser();
       const email = data.user?.email;
       if (!email) return;
@@ -112,6 +120,8 @@ export default function AssignedServiceDetails() {
       }
     } catch (err: any) {
       Alert.alert("Upload failed", err.message || "Unknown error");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -123,11 +133,13 @@ export default function AssignedServiceDetails() {
     }
   };
 
+  /* ================= OTP ================= */
   const verifyStartOtp = () => {
     if (startOtp !== booking.startotp) {
       Alert.alert("Invalid Start OTP");
       return;
     }
+    Keyboard.dismiss();
     setStartVerified(true);
   };
 
@@ -136,12 +148,20 @@ export default function AssignedServiceDetails() {
       Alert.alert("Invalid End OTP");
       return;
     }
+    Keyboard.dismiss();
     setEndVerified(true);
   };
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <StatusBar backgroundColor="#FFD700" barStyle="dark-content" />
+
+      {uploading && (
+        <View style={styles.loaderOverlay}>
+          <ActivityIndicator size="large" color="#FFD700" />
+          <Text style={styles.loaderText}>Uploading image...</Text>
+        </View>
+      )}
 
       <View style={styles.header}>
         <Image
@@ -153,212 +173,257 @@ export default function AssignedServiceDetails() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
-        <View style={styles.card}>
-          <Text style={styles.title}>{booking.customer_name}</Text>
-          <Text>Time: {booking.booking_time}</Text>
-          <Text>Address: {booking.full_address}</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "android" ? "height" : "padding"}
+        keyboardVerticalOffset={Platform.OS === "android" ? 60 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={[
+            styles.body,
+            { paddingBottom: 80, minHeight: "100%" },
+          ]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>{booking.customer_name}</Text>
+            <Text>Time: {booking.booking_time}</Text>
+            <Text>Address: {booking.full_address}</Text>
 
-          <TouchableOpacity
-            style={styles.callBtn}
-            onPress={() => {
-              if (!booking.phone_number) {
-                Alert.alert("Phone number not available");
-                return;
-              }
-              Linking.openURL(`tel:${booking.phone_number}`);
-            }}
-          >
-            <Ionicons name="call" size={18} color="#ffffff" />
-            <Text style={styles.callText}>Call Customer</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.mapBtn}
-            onPress={() => openMaps(booking.full_address)}
-          >
-            <Text>Navigate</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Start OTP</Text>
-          <TextInput
-            style={styles.otpInput}
-            value={startOtp}
-            onChangeText={setStartOtp}
-            keyboardType="number-pad"
-            maxLength={6}
-          />
-
-          {startVerified && (
-            <View style={styles.verifiedRow}>
-              <Ionicons name="checkmark-circle" size={16} color="green" />
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
-          )}
-
-          {!startVerified && (
-            <TouchableOpacity style={styles.btn} onPress={verifyStartOtp}>
-              <Text style={styles.btnText}>Verify Start OTP</Text>
+            <TouchableOpacity
+              style={styles.callBtn}
+              onPress={() => {
+                if (!booking.phone_number) {
+                  Alert.alert("Phone number not available");
+                  return;
+                }
+                Linking.openURL(`tel:${booking.phone_number}`);
+              }}
+            >
+              <Ionicons name="call" size={18} color="#ffffff" />
+              <Text style={styles.callText}>Call Customer</Text>
             </TouchableOpacity>
-          )}
 
-          {startVerified && (
-            <>
-              <View style={styles.imageRow}>
-                {beforeImages.map((uri, i) => (
-                  <View key={i} style={styles.imageWrapper}>
-                    <Image source={{ uri }} style={styles.preview} />
-                    <TouchableOpacity
-                      style={styles.removeBtn}
-                      onPress={() => removeImage(i, "start")}
-                    >
-                      <Ionicons name="close-circle" size={18} color="red" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+            <TouchableOpacity
+              style={styles.mapBtn}
+              onPress={() => openMaps(booking.full_address)}
+            >
+              <Text>Navigate</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.label}>Start OTP</Text>
+            <TextInput
+              style={styles.otpInput}
+              value={startOtp}
+              onChangeText={setStartOtp}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+
+            {startVerified && (
+              <View style={styles.verifiedRow}>
+                <Ionicons name="checkmark-circle" size={16} color="green" />
+                <Text style={styles.verifiedText}>Verified</Text>
               </View>
+            )}
 
+            {!startVerified && (
+              <TouchableOpacity style={styles.btn} onPress={verifyStartOtp}>
+                <Text style={styles.btnText}>Verify Start OTP</Text>
+              </TouchableOpacity>
+            )}
+
+            {startVerified && (
+              <>
+                <View style={styles.imageRow}>
+                  {beforeImages.map((uri, i) => (
+                    <View key={i} style={styles.imageWrapper}>
+                      <Image source={{ uri }} style={styles.preview} />
+                      <TouchableOpacity
+                        style={styles.removeBtn}
+                        onPress={() => removeImage(i, "start")}
+                      >
+                        <Ionicons name="close-circle" size={18} color="red" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={async () => {
+                    const uri = await openCamera();
+                    if (uri) uploadImage(uri, "start");
+                  }}
+                >
+                  <Text>
+                    {beforeImages.length === 0
+                      ? "Upload Image"
+                      : "Upload Another Image"}
+                  </Text>
+                  <Ionicons name="camera" size={18} />
+                </TouchableOpacity>
+              </>
+            )}
+
+            {beforeImages.length > 0 && !running && !workStopped && (
               <TouchableOpacity
-                style={styles.uploadBtn}
-                onPress={async () => {
-                  const uri = await openCamera();
-                  if (uri) uploadImage(uri, "start");
+                style={styles.startBtn}
+                onPress={() => {
+                  Alert.alert(
+                    "You Are Ready To Go 🚀",
+                    "Click OK to start work",
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      { text: "OK", onPress: () => setRunning(true) },
+                    ],
+                  );
                 }}
               >
-                <Text>
-                  {beforeImages.length === 0
-                    ? "Upload Image"
-                    : "Upload Another Image"}
-                </Text>
-                <Ionicons name="camera" size={18} />
+                <Text style={styles.btnText}>Start Work</Text>
               </TouchableOpacity>
-            </>
-          )}
+            )}
 
-          {beforeImages.length > 0 && !running && !workStopped && (
-            <TouchableOpacity
-              style={styles.startBtn}
-              onPress={() => {
-                Alert.alert(
-                  "You Are Ready To Go 🚀",
-                  "Click OK to start work",
-                  [
-                    { text: "Cancel", style: "cancel" },
+            {running && (
+              <Text style={styles.timer}>{formatDuration(seconds)}</Text>
+            )}
+
+            {running && (
+              <TouchableOpacity
+                style={styles.completeBtn}
+                onPress={() => {
+                  setRunning(false);
+                  setWorkStopped(true);
+                }}
+              >
+                <Text>Work Complete</Text>
+              </TouchableOpacity>
+            )}
+
+            {workStopped && (
+              <Text style={styles.timer}>
+                Worked Time: {formatDuration(seconds)}
+              </Text>
+            )}
+
+            {workStopped && (
+              <>
+                <View style={styles.imageRow}>
+                  {afterImages.map((uri, i) => (
+                    <View key={i} style={styles.imageWrapper}>
+                      <Image source={{ uri }} style={styles.preview} />
+                      <TouchableOpacity
+                        style={styles.removeBtn}
+                        onPress={() => removeImage(i, "end")}
+                      >
+                        <Ionicons name="close-circle" size={18} color="red" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.uploadBtn}
+                  onPress={async () => {
+                    const uri = await openCamera();
+                    if (uri) uploadImage(uri, "end");
+                  }}
+                >
+                  <Text>
+                    {afterImages.length === 0
+                      ? "Upload Image"
+                      : "Upload Another Image"}
+                  </Text>
+                  <Ionicons name="camera" size={18} />
+                </TouchableOpacity>
+
+                {/* ✅ ONLY CHANGE IS HERE */}
+                {afterImages.length > 0 && (
+                  <>
+                    <Text style={styles.label}>End OTP</Text>
+                    <TextInput
+                      style={styles.otpInput}
+                      value={endOtp}
+                      onChangeText={setEndOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                    />
+
+                    {endVerified && (
+                      <View style={styles.verifiedRow}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={16}
+                          color="green"
+                        />
+                        <Text style={styles.verifiedText}>Verified</Text>
+                      </View>
+                    )}
+
+                    {!endVerified && (
+                      <TouchableOpacity
+                        style={styles.btn}
+                        onPress={verifyEndOtp}
+                      >
+                        <Text style={styles.btnText}>Verify End OTP</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            {endVerified && afterImages.length > 0 && (
+              <TouchableOpacity
+                style={styles.serviceDone}
+                onPress={async () => {
+                  await supabase
+                    .from("bookings")
+                    .update({
+                      work_status: "COMPLETED",
+                      worked_duration: seconds,
+                      work_ended_at: new Date().toISOString(),
+                    })
+                    .eq("id", booking.id);
+
+                  Alert.alert("Well Done! 🎉", "You have completed a service", [
                     {
                       text: "OK",
-                      onPress: () => setRunning(true),
+                      onPress: () => router.replace("/dashboard"),
                     },
-                  ],
-                );
-              }}
-            >
-              <Text style={styles.btnText}>Start Work</Text>
-            </TouchableOpacity>
-          )}
-
-          {running && (
-            <Text style={styles.timer}>{formatDuration(seconds)}</Text>
-          )}
-
-          {running && (
-            <TouchableOpacity
-              style={styles.completeBtn}
-              onPress={() => {
-                setRunning(false);
-                setWorkStopped(true);
-              }}
-            >
-              <Text>Work Complete</Text>
-            </TouchableOpacity>
-          )}
-
-          {workStopped && (
-            <Text style={styles.timer}>
-              Worked Time: {formatDuration(seconds)}
-            </Text>
-          )}
-
-          {workStopped && (
-            <>
-              <View style={styles.imageRow}>
-                {afterImages.map((uri, i) => (
-                  <View key={i} style={styles.imageWrapper}>
-                    <Image source={{ uri }} style={styles.preview} />
-                    <TouchableOpacity
-                      style={styles.removeBtn}
-                      onPress={() => removeImage(i, "end")}
-                    >
-                      <Ionicons name="close-circle" size={18} color="red" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={styles.uploadBtn}
-                onPress={async () => {
-                  const uri = await openCamera();
-                  if (uri) uploadImage(uri, "end");
+                  ]);
                 }}
               >
-                <Text>
-                  {afterImages.length === 0
-                    ? "Upload Image"
-                    : "Upload Another Image"}
-                </Text>
-                <Ionicons name="camera" size={18} />
+                <Text style={styles.serviceDoneText}>Service Completed</Text>
               </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-              <Text style={styles.label}>End OTP</Text>
-              <TextInput
-                style={styles.otpInput}
-                value={endOtp}
-                onChangeText={setEndOtp}
-                keyboardType="number-pad"
-                maxLength={6}
-              />
+      {/* FOOTER */}
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerItem}>
+          <Ionicons name="home" size={22} color="#000" />
+          <Text style={styles.footerTextActive}>Home</Text>
+        </TouchableOpacity>
 
-              {endVerified && (
-                <View style={styles.verifiedRow}>
-                  <Ionicons name="checkmark-circle" size={16} color="green" />
-                  <Text style={styles.verifiedText}>Verified</Text>
-                </View>
-              )}
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => router.push("/dashboard")}
+        >
+          <Ionicons name="calendar-outline" size={22} color="#000" />
+          <Text style={styles.footerText}>Dashboard</Text>
+        </TouchableOpacity>
 
-              {!endVerified && (
-                <TouchableOpacity style={styles.btn} onPress={verifyEndOtp}>
-                  <Text style={styles.btnText}>Verify End OTP</Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
-
-          {endVerified && afterImages.length > 0 && (
-            <TouchableOpacity
-              style={styles.serviceDone}
-              onPress={async () => {
-                await supabase
-                  .from("bookings")
-                  .update({
-                    work_status: "COMPLETED",
-                    worked_duration: seconds,
-                    work_ended_at: new Date().toISOString(),
-                  })
-                  .eq("id", booking.id);
-
-                Alert.alert("Well Done! 🎉", "You have completed a service", [
-                  {
-                    text: "OK",
-                    onPress: () => router.replace("/dashboard"),
-                  },
-                ]);
-              }}
-            >
-              <Text style={styles.serviceDoneText}>Service Completed</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => router.push("/my-account")}
+        >
+          <Ionicons name="person-outline" size={22} color="#000" />
+          <Text style={styles.footerText}>Profile</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -431,10 +496,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
-  callText: {
-    fontWeight: "700",
-    color: "#ffffff",
-  },
+  callText: { fontWeight: "700", color: "#ffffff" },
   serviceDone: {
     marginTop: 24,
     backgroundColor: "#16a34a",
@@ -451,4 +513,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 20,
   },
+  loaderOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 100,
+  },
+  loaderText: { marginTop: 10, fontWeight: "700" },
+  footer: {
+    height: 70,
+    backgroundColor: "#ffffff",
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+  },
+  footerItem: { alignItems: "center" },
+  footerText: { fontSize: 12, marginTop: 4, fontWeight: "600" },
+  footerTextActive: { fontSize: 12, marginTop: 4, fontWeight: "800" },
 });
