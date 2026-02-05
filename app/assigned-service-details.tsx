@@ -113,10 +113,30 @@ export default function AssignedServiceDetails() {
         return;
       }
 
+      const { data: publicData } = supabase.storage
+        .from("work-photos")
+        .getPublicUrl(filePath);
+
+      const imageUrl = publicData.publicUrl;
+
       if (type === "start") {
         setBeforeImages((prev) => [...prev, localUri]);
+
+        await supabase
+          .from("bookings")
+          .update({
+            start_photo_url: [...(booking.start_photo_url || []), imageUrl],
+          })
+          .eq("id", booking.id);
       } else {
         setAfterImages((prev) => [...prev, localUri]);
+
+        await supabase
+          .from("bookings")
+          .update({
+            end_photo_url: [...(booking.end_photo_url || []), imageUrl],
+          })
+          .eq("id", booking.id);
       }
     } catch (err: any) {
       Alert.alert("Upload failed", err.message || "Unknown error");
@@ -275,7 +295,19 @@ export default function AssignedServiceDetails() {
                     "Click OK to start work",
                     [
                       { text: "Cancel", style: "cancel" },
-                      { text: "OK", onPress: () => setRunning(true) },
+                      {
+                        text: "OK",
+                        onPress: async () => {
+                          await supabase
+                            .from("bookings")
+                            .update({
+                              work_started_at: new Date().toISOString(),
+                            })
+                            .eq("id", booking.id);
+
+                          setRunning(true);
+                        },
+                      },
                     ],
                   );
                 }}
@@ -337,7 +369,6 @@ export default function AssignedServiceDetails() {
                   <Ionicons name="camera" size={18} />
                 </TouchableOpacity>
 
-                {/* ✅ ONLY CHANGE IS HERE */}
                 {afterImages.length > 0 && (
                   <>
                     <Text style={styles.label}>End OTP</Text>
@@ -401,7 +432,6 @@ export default function AssignedServiceDetails() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerItem}>
           <Ionicons name="home" size={22} color="#000" />
