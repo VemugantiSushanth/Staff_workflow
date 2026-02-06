@@ -33,7 +33,7 @@ export default function AppFooter() {
         <Ionicons
           name="person-outline"
           size={22}
-          color={isActive("/my-account") ? "#000" : "#111"}
+          color={isActive("/my-account") ? "#dacbcb" : "#c9c2c2"}
         />
         <Text style={styles.text}>Profile</Text>
       </TouchableOpacity>

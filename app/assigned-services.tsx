@@ -147,7 +147,7 @@ export default function AssignedServices() {
           style={styles.footerItem}
           onPress={() => router.replace("/my-role")}
         >
-          <Ionicons name="home" size={22} color="#000" />
+          <Ionicons name="home-outline" size={22} color="#000000" />
           <Text style={styles.footerText}>Home</Text>
         </TouchableOpacity>
 

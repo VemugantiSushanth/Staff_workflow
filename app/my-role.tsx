@@ -296,7 +296,7 @@ export default function MyRoleScreen() {
       {/* FOOTER */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.footerItem}>
-          <Ionicons name="home" size={22} color="#000" />
+          <Ionicons name="home-outline" size={22} color="#000000" />
           <Text style={styles.footerTextActive}>Home</Text>
         </TouchableOpacity>
 
@@ -304,7 +304,7 @@ export default function MyRoleScreen() {
           style={styles.footerItem}
           onPress={() => router.push("/dashboard")}
         >
-          <Ionicons name="calendar-outline" size={22} color="#000" />
+          <Ionicons name="calendar-outline" size={22} color="#000000" />
           <Text style={styles.footerText}>Dashboard</Text>
         </TouchableOpacity>
 
