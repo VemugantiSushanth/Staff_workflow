@@ -15,6 +15,7 @@ import {
   View,
   Image,
 } from "react-native";
+import * as LocalAuthentication from "expo-local-authentication";
 import { supabase } from "./supabase";
 
 export default function LoginScreen() {
@@ -23,6 +24,37 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  /**
+   * 🔐 Biometric / PIN Authentication
+   */
+  const verifyDeviceSecurity = async () => {
+    try {
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!hasHardware || !isEnrolled) {
+        Alert.alert(
+          "Security Required",
+          "Please enable fingerprint, face ID, or device PIN to continue.",
+        );
+        return false;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: "Verify to access Neatify Staff",
+        fallbackLabel: "Use Device PIN",
+        cancelLabel: "Cancel",
+      });
+
+      return result.success;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  /**
+   * 🔑 Login Handler
+   */
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Email and password required");
@@ -30,6 +62,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -37,6 +70,20 @@ export default function LoginScreen() {
       });
 
       if (error) throw error;
+
+      // 👉 After successful login → verify biometric / PIN
+      const verified = await verifyDeviceSecurity();
+
+      if (!verified) {
+        await supabase.auth.signOut();
+        Alert.alert(
+          "Verification Failed",
+          "Security verification is required to continue.",
+        );
+        return;
+      }
+
+      // ✅ All good → go to next page
       router.replace("./my-role");
     } catch (err: any) {
       Alert.alert("Login Failed", err.message);
@@ -61,6 +108,7 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Staff Login</Text>
         </View>
 
+        {/* EMAIL */}
         <View style={styles.inputContainer}>
           <Mail size={20} />
           <TextInput
@@ -73,6 +121,7 @@ export default function LoginScreen() {
           />
         </View>
 
+        {/* PASSWORD */}
         <View style={styles.inputContainer}>
           <Lock size={20} />
           <TextInput
@@ -88,6 +137,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* LOGIN BUTTON */}
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={handleLogin}
@@ -100,17 +150,21 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        <View style={styles.footer}>
+        {/* FOOTER */}
+        {/* <View style={styles.footer}>
           <Text>Don't have an account?</Text>
           <TouchableOpacity onPress={() => router.push("/signup")}>
             <Text style={styles.linkText}> Sign Up</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
+/**
+ * 🎨 Styles
+ */
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
