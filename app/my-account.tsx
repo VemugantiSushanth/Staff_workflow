@@ -18,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 /* ================= SCREEN ================= */
 
 export default function MyAccountScreen() {
-  const [fullName, setFullName] = useState("");
+  const [name, setname] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -39,7 +39,7 @@ export default function MyAccountScreen() {
         .single();
 
       if (profile) {
-        setFullName(profile.full_name ?? "");
+        setname(profile.name ?? "");
         setPhone(profile.phone ?? "");
         setGender(profile.gender ?? null);
         setAvatarUrl(
@@ -117,7 +117,7 @@ export default function MyAccountScreen() {
         </View>
 
         {/* ================= READ ONLY FIELDS ================= */}
-        <ProfileField label="FULL NAME" value={fullName} />
+        <ProfileField label="FULL NAME" value={name} />
         <ProfileField
           label="EMAIL"
           value={email}
